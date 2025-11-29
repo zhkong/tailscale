@@ -163,6 +163,9 @@ func tailscaleSet(ctx context.Context, cfg *settings) error {
 	if cfg.Hostname != "" {
 		args = append(args, "--hostname="+cfg.Hostname)
 	}
+	if cfg.RelayServerPort != nil {
+		args = append(args, "--relay-server-port="+*cfg.RelayServerPort)
+	}
 	log.Printf("Running 'tailscale set'")
 	cmd := exec.CommandContext(ctx, "tailscale", args...)
 	cmd.Stdout = os.Stdout

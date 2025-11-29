@@ -81,6 +81,9 @@ type settings struct {
 	// certs) and 'rw' for Pods that should manage the TLS certs shared
 	// amongst the replicas.
 	CertShareMode string
+	// RelayServerPort is the UDP port for the relay server to bind to.
+	// A value of 0 means a random unused port, nil means disabled.
+	RelayServerPort *string
 }
 
 func configFromEnv() (*settings, error) {
@@ -117,6 +120,7 @@ func configFromEnv() (*settings, error) {
 		EgressProxiesCfgPath:                  defaultEnv("TS_EGRESS_PROXIES_CONFIG_PATH", ""),
 		IngressProxiesCfgPath:                 defaultEnv("TS_INGRESS_PROXIES_CONFIG_PATH", ""),
 		PodUID:                                defaultEnv("POD_UID", ""),
+		RelayServerPort:                       defaultEnvStringPointer("TS_RELAY_SERVER_PORT"),
 	}
 	podIPs, ok := os.LookupEnv("POD_IPS")
 	if ok {

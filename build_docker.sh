@@ -16,6 +16,13 @@
 # To build a Tailscale image and push to a remote docker registry:
 #
 #   $ REPO=<your-registry>/<your-repo>/tailscale TAGS=v0.0.1  make publishdevimage
+#
+# Container runtime configuration (set when running the container):
+#
+# To configure relay server port at runtime:
+#
+#   $ docker run -e TS_RELAY_SERVER_PORT=0 <image>  # 0 for random port
+#   $ docker run -e TS_RELAY_SERVER_PORT=41641 <image>  # specific port
 
 set -eu
 

@@ -64,6 +64,9 @@
 //     the address specified by TS_LOCAL_ADDR_PORT. The health endpoint will return 200
 //     OK if this node has at least one tailnet IP address, otherwise returns 503.
 //     NB: the health criteria might change in the future.
+//   - TS_RELAY_SERVER_PORT: the UDP port number for the relay server to bind to on all
+//     interfaces. Set to "0" to use a random unused port, or leave unset to disable
+//     relay server functionality. This is an experimental feature.
 //   - TS_EXPERIMENTAL_VERSIONED_CONFIG_DIR: if specified, a path to a
 //     directory that containers tailscaled config in file. The config file needs to be
 //     named cap-<current-tailscaled-cap>.hujson. If this is set, TS_HOSTNAME,
@@ -368,6 +371,12 @@ authLoop:
 		// settings that we need to.
 		if err := tailscaleSet(ctx, cfg); err != nil {
 			return fmt.Errorf("failed to auth tailscale: %w", err)
+		}
+	} else if cfg.RelayServerPort != nil {
+		// For non-auth-once mode, we still need to set relay server port
+		// after authentication if it's configured
+		if err := setRelayServerPort(ctx, client, cfg.RelayServerPort); err != nil {
+			return fmt.Errorf("failed to set relay server port: %w", err)
 		}
 	}
 
@@ -891,4 +900,41 @@ func runHTTPServer(mux *http.ServeMux, addr string) (close func() error) {
 		err := srv.Shutdown(context.Background())
 		return errors.Join(err, ln.Close())
 	}
+}
+
+// setRelayServerPort sets the relay server port using the local API
+func setRelayServerPort(ctx context.Context, client *tailscale.LocalClient, port *string) error {
+	if port == nil {
+		return nil
+	}
+	
+	log.Printf("Setting relay server port to %s", *port)
+	
+	// Convert string port to int
+	var portInt int
+	if *port != "" {
+		if _, err := fmt.Sscanf(*port, "%d", &portInt); err != nil {
+			return fmt.Errorf("invalid relay server port %q: %w", *port, err)
+		}
+	}
+	
+	// Get current prefs
+	prefs, err := client.GetPrefs(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get current prefs: %w", err)
+	}
+	
+	// Update relay server port
+	prefs.RelayServerPort = &portInt
+	
+	// Apply the updated prefs
+	_, err = client.EditPrefs(ctx, &ipn.MaskedPrefs{
+		Prefs: *prefs,
+		RelayServerPortSet: true,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to edit prefs: %w", err)
+	}
+	
+	return nil
 }
